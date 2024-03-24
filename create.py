@@ -1,3 +1,5 @@
+#restart libvirtd trước khi chạy
+
 import libvirt
 from subprocess import run
 
