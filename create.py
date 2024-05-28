@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     if create_vm(vm_name):
         ip_address = get_network_ip("default")
-        if ip_address:
+       # if ip_address:
            # print(f"IP address assigned to VM: {ip_address}")
-        else:
+     #   else:
            # print("Failed to retrieve IP address.")
