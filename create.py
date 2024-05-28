@@ -1,73 +1,101 @@
-#restart libvirtd trước khi chạy
-
 import libvirt
-from subprocess import run
+import os
+import subprocess
+import random
+import string
 
-def create_disk_image(image_path, size_in_gib):
-    """
-    Tạo một ổ đĩa ảo (qcow2) với kích thước đã cho.
+def generate_mac():
+    mac = [ 0x52, 0x54, 0x00,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+    return ':'.join(map(lambda x: "%02x" % x, mac))
 
-    Args:
-      image_path (str): Đường dẫn đến tệp ảnh.
-      size_in_gib (int): Kích thước của ổ đĩa ảo trong GiB.
-    """
-    # Chuyển đổi kích thước từ GiB sang byte
-    size_in_bytes = size_in_gib * 1024 * 1024 * 1024
+def create_vm(vm_name, image_path="/home/ubuntu/Desktop/images/abc.qcow2", network_name="default"):
+    # Tạo đường dẫn mới cho tệp hình ảnh của máy ảo
+    new_image_path = f"/var/lib/libvirt/images/{vm_name}.qcow2"
+    
+    print(f"Copying image from {image_path} to {new_image_path}")  # In ra đường dẫn trước khi sao chép
+    
+    # Kiểm tra xem tệp hình ảnh mới đã tồn tại chưa
+    if os.path.exists(new_image_path):
+        print(f"Image file {new_image_path} already exists.")
+        return False
 
-    # Sử dụng lệnh qemu-img để tạo tệp qcow2
-    run(["qemu-img", "create", "-f", "qcow2", image_path, str(size_in_bytes)])
+    # Kiểm tra xem tệp hình ảnh nguồn có tồn tại không
+    if not os.path.exists(image_path):
+        print(f"Source image file {image_path} does not exist.")
+        return False
 
-    print(f"Tạo thành công ổ đĩa ảo: {image_path}")
-def create_vm(vm_name, memory, vcpu, disk_path, disk_size, os_iso):
-    conn = libvirt.open('qemu:///system')  # Mở kết nối tới libvirt
-
-    # Tạo ổ đĩa nếu chưa tồn tại
     try:
-        open(disk_path)
-    except FileNotFoundError:
-        create_disk_image(disk_path, disk_size)
+        # Sao chép tệp qcow2
+        cp_process = subprocess.run(['sudo', 'cp', image_path, new_image_path], capture_output=True, text=True)
+        if cp_process.returncode == 0:
+            print(f"Successfully copied {image_path} to {new_image_path}")  # Thêm thông báo in ra console
+        else:
+            print(f"Failed to copy {image_path} to {new_image_path}: {cp_process.stderr}")
+            return False
+    except Exception as e:
+        print(f"Failed to copy {image_path} to {new_image_path}: {e}")
+        return False
 
-    # Tạo định dạng XML cho máy ảo
-    xml_config = """
-    <domain type='kvm'>
-        <name>{}</name>
-        <memory unit='KiB'>{}</memory>
-        <vcpu placement='static'>{}</vcpu>
-        <os>  
-            <type arch='x86_64' machine='pc'>hvm</type>
-            <boot dev='hd'/>  
-            <boot dev='cdrom'/>
-        </os>
-        <devices>
-            <disk type='file' device='disk'>
-                <driver name="qemu" type="qcow2"/>
-                <source file='{}'/>
-                <target dev='vda' bus='virtio'/>
+    conn = libvirt.open('qemu:///system')
+    if conn is None:
+        print('Failed to open connection to qemu:///system')
+        return False
 
+    xml = f'''
+        <domain type='kvm'>
+            <name>{vm_name}</name>
+            <memory unit='KiB'>4194304</memory>
+            <vcpu placement='static'>2</vcpu>
+            <os>
+                <type arch='x86_64' machine='pc-i440fx-2.11'>hvm</type>
+                <boot dev='hd'/>
+            </os>
+            <devices>
+                <disk type='file' device='disk'>
+                    <driver name='qemu' type='qcow2'/>
+                    <source file='{new_image_path}'/>
+                    <target dev='vda' bus='virtio'/>
+                    <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+                </disk>
+                <interface type='network'>
+                    <mac address='{generate_mac()}'/>
+                    <source network='{network_name}'/>
+                    <model type='virtio'/>
+                    <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+                <graphics type='vnc' port='-1' autoport='yes'/>
+            </devices>
+        </domain>
+    '''
 
-            </disk>
-            <disk type='file' device='cdrom'>
-        <driver name="qemu" type="raw"/>
-                <source file='{}'/>
-                <target dev="sda" bus="sata"/>
-                <readonly/>
+    try:
+        dom = conn.createXML(xml, 0)
+        print(f"Virtual machine '{vm_name}' created successfully.")
+        return True
+    except Exception as e:
+        print(f"Failed to create virtual machine '{vm_name}': {str(e)}")
+        return False
+    finally:
+        conn.close()
 
+def get_network_ip(network_name):
+    try:
+        output = subprocess.check_output(['virsh', 'net-dhcp-leases', network_name]).decode()
+        ip_list = [line.split()[4] for line in output.split('\n')[2:] if line]
+        return ip_list[0] if ip_list else None
+    except Exception as e:
+        print(f"Failed to get IP address from network '{network_name}': {str(e)}")
+        return None
 
-            </disk>
-            <interface type='network'>
-                <source network='default'/>
-            </interface>
-            <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
-        </devices>
-    </domain>
-    """.format(vm_name, memory * 1024, vcpu, disk_path, os_iso)
+if __name__ == "__main__":
+    vm_name = input("Enter VM name: ")
 
-    # Tạo máy ảo từ định dạng XML
-    vm = conn.createXML(xml_config, 0)
-
-    conn.close()
-
-# Sử dụng hàm để tạo máy ảo
-vm_name = input("Nhập tên cho máy ảo: ")
-disk_path = f"/var/lib/libvirt/images/{vm_name}.qcow2"
-create_vm(vm_name, 2048, 2, disk_path, 20, "/home/ubuntu/Downloads/ubuntu-22.04.4-desktop-amd64.iso")
+    if create_vm(vm_name):
+        ip_address = get_network_ip("default")
+        if ip_address:
+           # print(f"IP address assigned to VM: {ip_address}")
+        else:
+           # print("Failed to retrieve IP address.")
