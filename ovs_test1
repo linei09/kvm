@@ -1,0 +1,108 @@
+import subprocess
+import libvirt
+import sys
+import time
+
+def create_ovs_bridge(bridge_name):
+    try:
+        subprocess.run(['sudo', 'ovs-vsctl', 'add-br', bridge_name], check=True)
+        print(f"OVS Bridge {bridge_name} created.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to create OVS Bridge {bridge_name}: {e}")
+        sys.exit(1)
+
+def create_tap_interface(tap_name):
+    try:
+        subprocess.run(['sudo', 'ip', 'tuntap', 'add', 'dev', tap_name, 'mode', 'tap'], check=True)
+        subprocess.run(['sudo', 'ip', 'link', 'set', tap_name, 'up'], check=True)
+        print(f"Tap interface {tap_name} created and set up.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to create tap interface {tap_name}: {e}")
+        sys.exit(1)
+
+def add_port_to_ovs_bridge(bridge_name, port_name):
+    try:
+        subprocess.run(['sudo', 'ovs-vsctl', 'add-port', bridge_name, port_name], check=True)
+        print(f"Port {port_name} added to OVS Bridge {bridge_name}.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to add port {port_name} to OVS Bridge {bridge_name}: {e}")
+        sys.exit(1)
+
+def modify_vm_for_hotplug(dom, conn):
+    try:
+        xml_desc = dom.XMLDesc(0)
+        if '<controller type="pci" model="pci-root"/>' not in xml_desc:
+            pci_xml = """
+            <controller type='pci' model='pci-root'>
+              <model name='pci-root'/>
+            </controller>
+            <controller type='pci' model='pcie-root'/>
+            <controller type='pci' model='pcie-root-port'>
+              <capability type='hotplug'/>
+            </controller>
+            """
+            dom_xml = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+            dom_undef = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+            dom.undefine()
+            conn.defineXML(dom_xml.replace("</devices>", pci_xml + "</devices>"))
+            print("Modified VM to support hotplugging.")
+    except libvirt.libvirtError as e:
+        print(f"Failed to modify VM for hotplugging: {e}")
+        sys.exit(1)
+
+def attach_interface_to_vm(vm_name, bridge_name, tap_name):
+    try:
+        conn = libvirt.open('qemu:///system')
+        if conn is None:
+            print('Failed to open connection to qemu:///system', file=sys.stderr)
+            sys.exit(1)
+
+        dom = conn.lookupByName(vm_name)
+        if dom is None:
+            print(f'Failed to find the domain {vm_name}', file=sys.stderr)
+            sys.exit(1)
+
+        if dom.isActive():
+            print(f"Stopping VM {vm_name} to update configuration for hotplug support.")
+            dom.destroy()
+            time.sleep(5)  # Wait for the VM to stop
+
+        modify_vm_for_hotplug(dom, conn)
+
+        iface_xml = f"""
+        <interface type="bridge">
+          <source bridge="{bridge_name}"/>
+          <virtualport type='openvswitch'/>
+          <model type="virtio"/>
+          <driver name="vhost"/>
+        </interface>
+        """
+
+        # Ensure the domain is started
+        dom = conn.lookupByName(vm_name)  # Re-fetch the domain after re-definition
+        if not dom.isActive():
+            dom.create()
+            time.sleep(5)  # Wait for the VM to start
+
+        dom.attachDeviceFlags(iface_xml, libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        print(f"Interface {tap_name} attached to VM {vm_name} using bridge {bridge_name}.")
+
+    except libvirt.libvirtError as e:
+        print(f"Failed to attach interface: {e}")
+        sys.exit(1)
+    finally:
+        if conn is not None:
+            conn.close()
+
+def main():
+    bridge_name = input("Enter the name of the OVS bridge: ")
+    vm_name = input("Enter the name of the VM: ")
+    tap_name = input("Enter the name of the tap interface: ")
+
+    create_ovs_bridge(bridge_name)
+    create_tap_interface(tap_name)
+    add_port_to_ovs_bridge(bridge_name, tap_name)
+    attach_interface_to_vm(vm_name, bridge_name, tap_name)
+
+if __name__ == '__main__':
+    main()
