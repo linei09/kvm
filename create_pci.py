@@ -39,10 +39,16 @@ except Exception as e:
 
 # Định nghĩa XML cho máy ảo với PCIe và hỗ trợ hotplugging
 pci_controllers = "<controller type='pci' index='0' model='pcie-root'/>"  # Root PCIe controller
-for i in range(1, 16):  # 15 PCI controllers
+for i in range(1, 10):  # 5 PCI controllers (add more if needed)
     pci_controllers += f"<controller type='pci' index='{i}' model='pcie-root-port'/>"
 
 # Sử dụng host-passthrough cho CPU để tránh lỗi CPUID và dùng đồ họa QXL
+# Định nghĩa 10 PCI controllers
+pci_controllers = "<controller type='pci' index='0' model='pcie-root'/>"  # Root PCIe controller
+for i in range(1, 11):  # 10 PCI controllers
+    pci_controllers += f"<controller type='pci' index='{i}' model='pcie-root-port'/>"
+
+# Định nghĩa XML cho máy ảo với 10 PCI controllers
 domain_xml = f"""
 <domain type='kvm'>
   <name>{vm_name}</name>
@@ -66,7 +72,7 @@ domain_xml = f"""
       <source network='default'/>
       <model type='virtio'/>
     </interface>
-    {pci_controllers} <!-- 15 PCI Controllers -->
+    {pci_controllers} <!-- 10 PCI Controllers -->
     <video>
       <model type='qxl'/>
     </video>
@@ -79,6 +85,7 @@ domain_xml = f"""
   </devices>
 </domain>
 """
+
 
 # Định nghĩa và khởi động máy ảo với cấu hình hỗ trợ hotplugging
 try:
