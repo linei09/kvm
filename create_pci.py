@@ -39,14 +39,18 @@ except Exception as e:
 
 # Định nghĩa XML cho máy ảo với PCIe và hỗ trợ hotplugging
 pci_controllers = "<controller type='pci' index='0' model='pcie-root'/>"  # Root PCIe controller
-for i in range(1, 31):
+for i in range(1, 16):  # 15 PCI controllers
     pci_controllers += f"<controller type='pci' index='{i}' model='pcie-root-port'/>"
 
+# Sử dụng host-passthrough cho CPU để tránh lỗi CPUID và dùng đồ họa QXL
 domain_xml = f"""
 <domain type='kvm'>
   <name>{vm_name}</name>
   <memory unit='KiB'>2097152</memory> <!-- RAM 2GB -->
   <vcpu placement='static'>2</vcpu> <!-- 2 CPUs -->
+  <cpu mode='host-passthrough'>
+    <feature policy='require' name='vmx'/>
+  </cpu>
   <os>
     <type arch='x86_64' machine='pc-q35-6.1'>hvm</type>
     <boot dev='hd'/>
@@ -62,24 +66,19 @@ domain_xml = f"""
       <source network='default'/>
       <model type='virtio'/>
     </interface>
-    {pci_controllers} <!-- 31 PCI Controllers -->
+    {pci_controllers} <!-- 15 PCI Controllers -->
+    <video>
+      <model type='qxl'/>
+    </video>
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
-    <graphics type='vnc' port='-1' autoport='yes'/>
+    <graphics type='spice' autoport='yes' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
   </devices>
 </domain>
 """
-
-# Lưu cấu hình XML của máy ảo vào thư mục /etc/libvirt/qemu/
-xml_config_path = f"/etc/libvirt/qemu/{vm_name}.xml"
-try:
-    with open(xml_config_path, 'w') as xml_file:
-        xml_file.write(domain_xml)
-except Exception as e:
-    print(f"Failed to save XML configuration file: {e}")
-    conn.close()
-    exit(1)
 
 # Định nghĩa và khởi động máy ảo với cấu hình hỗ trợ hotplugging
 try:
