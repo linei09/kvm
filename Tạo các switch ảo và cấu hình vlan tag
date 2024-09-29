@@ -1,0 +1,60 @@
+import subprocess
+
+def run_ovs_command(command):
+    """Chạy lệnh OVS và in kết quả."""
+    try:
+        subprocess.run(f"sudo {command}", shell=True, check=True)
+        print(f"Thực hiện: {command} thành công.")
+    except subprocess.CalledProcessError as e:
+        print(f"Lỗi khi thực hiện: {command}. Chi tiết lỗi: {e}")
+
+def create_virtual_switch():
+    """Tạo một switch ảo với tên theo cú pháp brx."""
+    x = input("Nhập một số hoặc chữ cái cho switch (vd: 1, 2, a, b): ").strip()
+    switch_name = f"br{x}"  # Tạo tên bridge theo cú pháp brx
+    command = f"ovs-vsctl add-br {switch_name}"
+    run_ovs_command(command)
+    print(f"Switch {switch_name} đã được tạo thành công.")
+    
+    # Hỏi người dùng xem có muốn tạo đường trunk không
+    create_trunk = input("Bạn có muốn tạo đường trunk (y/n)? ").strip().lower()
+    
+    if create_trunk == 'y':
+        y = input(f"Nhập số hoặc chữ cái cho switch mà {switch_name} muốn tạo đường trunk tới (vd: 1, 2, a, b): ").strip()
+        
+        # Tạo trunk trkXY và trkYX
+        trunk_xy = f"trk{x}{y}"  # Tạo tên trunk theo cú pháp trkXY
+        trunk_yx = f"trk{y}{x}"  # Tạo tên trunk theo cú pháp trkYX
+        
+        # Thêm các bridge trunk
+        command = f"ovs-vsctl add-br {trunk_xy}"
+        run_ovs_command(command)
+        print(f"Đường trunk {trunk_xy} đã được tạo thành công.")
+        
+        command = f"ovs-vsctl add-br {trunk_yx}"
+        run_ovs_command(command)
+        print(f"Đường trunk {trunk_yx} đã được tạo thành công.")
+
+        # Thêm port trunk vào các bridge tương ứng
+        command = f"ovs-vsctl add-port br{x} {trunk_xy}"
+        run_ovs_command(command)
+        
+        command = f"ovs-vsctl add-port br{y} {trunk_yx}"
+        run_ovs_command(command)
+
+        # Kết hợp hai switch với nhau qua patch
+        command = f"ovs-vsctl set interface {trunk_xy} type=patch options:peer={trunk_yx}"
+        run_ovs_command(command)
+        
+        command = f"ovs-vsctl set interface {trunk_yx} type=patch options:peer={trunk_xy}"
+        run_ovs_command(command)
+        
+        print(f"Switch br{x} và br{y} đã được kết hợp thông qua patch.")
+    else:
+        print("Không tạo đường trunk.")
+
+def main():
+    create_virtual_switch()
+
+if __name__ == "__main__":
+    main()
