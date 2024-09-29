@@ -15,6 +15,35 @@ def create_virtual_switch():
     command = f"sudo ovs-vsctl add-br {switch_name}"
     run_ovs_command(command)
     print(f"Switch {switch_name} đã được tạo thành công.")
+    create_libvirt_network_xml(switch_name, x)
+
+def create_libvirt_network_xml(switch_name, x):
+    """Tạo file XML trong thư mục /etc/libvirt/qemu/networks/brx.xml với quyền sudo."""
+    network_xml = f"""
+<network>
+  <name>ovs{x}</name>
+  <forward mode='bridge'/>
+  <bridge name='{switch_name}'/>
+  <virtualport type='openvswitch'/>
+  <portgroup name='vlan-00' default='yes'>
+  </portgroup>
+  <portgroup name='vlan-{x}00'>
+    <vlan>
+      <tag id='{x}00'/>
+    </vlan>
+  </portgroup>
+</network>
+"""
+    # Đường dẫn đến file XML
+    xml_file_path = f"/etc/libvirt/qemu/networks/{switch_name}.xml"
+    
+    # Dùng sudo tee để ghi vào file với quyền sudo
+    try:
+        process = subprocess.Popen(['sudo', 'tee', xml_file_path], stdin=subprocess.PIPE)
+        process.communicate(input=network_xml.encode())
+        print(f"File {xml_file_path} đã được tạo thành công.")
+    except Exception as e:
+        print(f"Lỗi khi tạo file XML: {e}")
 
 def main():
     create_virtual_switch()
