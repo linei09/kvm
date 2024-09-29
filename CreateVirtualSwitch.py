@@ -18,7 +18,8 @@ def create_virtual_switch():
     create_libvirt_network_xml(x)
 
 def create_libvirt_network_xml(x):
-    """Tạo file XML trong thư mục /etc/libvirt/qemu/networks/ovs{x}.xml với quyền sudo."""
+    """Tạo file XML trong thư mục /etc/libvirt/qemu/networks/ovs{x}.xml với quyền sudo,
+    sau đó định nghĩa, khởi động và tự động khởi động mạng."""
     network_xml = f"""
 <network>
   <name>ovs{x}</name>
@@ -44,6 +45,14 @@ def create_libvirt_network_xml(x):
         print(f"File {xml_file_path} đã được tạo thành công.")
     except Exception as e:
         print(f"Lỗi khi tạo file XML: {e}")
+
+    # Định nghĩa, khởi động và tự động khởi động mạng
+    try:
+        run_ovs_command(f"virsh net-define {xml_file_path}")
+        run_ovs_command(f"virsh net-start ovs{x}")
+        run_ovs_command(f"virsh net-autostart ovs{x}")
+    except Exception as e:
+        print(f"Lỗi khi thực hiện lệnh virsh: {e}")
 
 def main():
     create_virtual_switch()
