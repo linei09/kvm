@@ -9,7 +9,7 @@ if conn is None:
     exit(1)
 
 # Đường dẫn tới file QCOW2 gốc
-qcow2_path = "/home/ubuntu/Desktop/ubuntu22.04.qcow2"
+qcow2_path = "/home/ubutnu/Desktop/ubuntu22.04.qcow2"
 
 # Kiểm tra xem file QCOW2 có tồn tại không
 if not os.path.exists(qcow2_path):
@@ -37,12 +37,20 @@ except Exception as e:
     conn.close()
     exit(1)
 
-# Định nghĩa XML cho máy ảo với PCIe và hỗ trợ hotplugging
+# Định nghĩa XML cho máy ảo với 5 PCIe controllers và hỗ trợ hotplugging
+pci_controllers = "<controller type='pci' index='0' model='pcie-root'/>"  # Root PCIe controller
+for i in range(1, 6):  # 5 PCI controllers
+    pci_controllers += f"<controller type='pci' index='{i}' model='pcie-root-port'/>"
+
+# Định nghĩa XML cho máy ảo với 5 PCI controllers
 domain_xml = f"""
 <domain type='kvm'>
   <name>{vm_name}</name>
-  <memory unit='KiB'>2097152</memory> <!-- RAM 2GB -->
-  <vcpu placement='static'>2</vcpu> <!-- 2 CPUs -->
+  <memory unit='KiB'>4194304</memory> <!-- RAM 4GB -->
+  <vcpu placement='static'>4</vcpu> <!-- 2 CPUs -->
+  <cpu mode='host-passthrough'>
+    <feature policy='require' name='vmx'/>
+  </cpu>
   <os>
     <type arch='x86_64' machine='pc-q35-6.1'>hvm</type>
     <boot dev='hd'/>
@@ -56,26 +64,20 @@ domain_xml = f"""
     </disk>
     <interface type='network'>
       <source network='default'/>
-      <model type='virtio'/>
     </interface>
-    <controller type='pci' index='0' model='pcie-root'/>
+    {pci_controllers} <!-- 5 PCI Controllers -->
+    <video>
+      <model type='qxl'/>
+    </video>
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
-    <graphics type='vnc' port='-1' autoport='yes'/>
+    <graphics type='spice' autoport='yes' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
   </devices>
 </domain>
 """
-
-# Lưu cấu hình XML của máy ảo vào thư mục /etc/libvirt/qemu/
-xml_config_path = f"/etc/libvirt/qemu/{vm_name}.xml"
-try:
-    with open(xml_config_path, 'w') as xml_file:
-        xml_file.write(domain_xml)
-except Exception as e:
-    print(f"Failed to save XML configuration file: {e}")
-    conn.close()
-    exit(1)
 
 # Định nghĩa và khởi động máy ảo với cấu hình hỗ trợ hotplugging
 try:
