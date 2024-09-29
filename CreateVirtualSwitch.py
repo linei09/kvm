@@ -12,7 +12,7 @@ def create_virtual_switch():
     """Tạo một switch ảo với tên theo cú pháp brx."""
     x = input("Nhập một số hoặc chữ cái cho switch (vd: 1, 2, a, b): ").strip()
     switch_name = f"br{x}"  # Tạo tên bridge theo cú pháp brx
-    command = f"ovs-vsctl add-br {switch_name}"
+    command = f"sudo ovs-vsctl add-br {switch_name}"
     run_ovs_command(command)
     print(f"Switch {switch_name} đã được tạo thành công.")
 
