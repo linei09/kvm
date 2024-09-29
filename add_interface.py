@@ -19,7 +19,6 @@ def add_interface_to_vm(vm_name, network_name, interface_name, vlan):
         interface_xml = f"""
         <interface type='network'>
             <source network='{network_name}' portgroup='{vlan}'/>
-            <virtualport type='openvswitch'/>
             <target dev='{interface_name}'/>
             <model type='virtio'/>
             <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
