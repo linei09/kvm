@@ -60,10 +60,10 @@ EOF
 touch meta-data**
 
 11. Attach cloud-init to the image:
-**  cloud-localds -v --network-config=network-config ./$VM_NAME-seed.qcow2 user-data meta-data
-**
+  ``` cloud-localds -v --network-config=network-config ./$VM_NAME-seed.qcow2 user-data meta-data``` 
+
 13. Create the VM:
- ** sudo virt-install --connect qemu:///system \
+ sudo virt-install --connect qemu:///system \
   --virt-type kvm \
   --name $VM_NAME \
   --ram 2048 \
@@ -73,4 +73,4 @@ touch meta-data**
   --disk path=$VM_NAME-seed.qcow2,device=disk \
   --import \
   --network bridge=virbr0,model=virtio,mac=$MAC_ADDR \
-  --noautoconsole**
+  --noautoconsole
