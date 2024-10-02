@@ -2,8 +2,8 @@ KVM on Ubuntu 22.04 LTS (Jammy Jellyfish) cloud images
 1. Check: **egrep -c '(vmx|svm)' /proc/cpuinfo**
 2. Check: **sudo kvm-ok**
 3. Install:
-  "sudo apt update
-  sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager cloud-image-utils "
+  sudo apt update
+  sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager cloud-image-utils 
 4. Add yourself to the libvirt and kvm groups:
 **  sudo adduser $USER libvirt
   sudo adduser $USER kvm**
