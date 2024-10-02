@@ -1,22 +1,22 @@
 KVM on Ubuntu 22.04 LTS (Jammy Jellyfish) cloud images
-1. Check: **egrep -c '(vmx|svm)' /proc/cpuinfo**
-2. Check: **sudo kvm-ok**
+1. Check: ``` egrep -c '(vmx|svm)' /proc/cpuinfo``` 
+2. Check: ``` sudo kvm-ok``` 
 3. Install:
-  sudo apt update
-  sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager cloud-image-utils 
-4. Add yourself to the libvirt and kvm groups:
+   ``` sudo apt update
+   sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager cloud-image-utils```  
+5. Add yourself to the libvirt and kvm groups:
 **  sudo adduser $USER libvirt
   sudo adduser $USER kvm**
-5. Check: **virsh list --all**
-6. Check: **sudo systemctl status libvirtd**
-7. Export needed variables:
+6. Check: **virsh list --all**
+7. Check: **sudo systemctl status libvirtd**
+8. Export needed variables:
 **  export MAC_ADDR=$(printf '52:54:00:%02x:%02x:%02x' $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))
   export INTERFACE=eth001
   export IP_ADDR=192.168.122.101
   export VM_NAME=vm01
   export UBUNTU_RELEASE=jammy  
   export VM_IMAGE=$UBUNTU_RELEASE-server-cloudimg-amd64.img\**
-8. Download the Ubuntu 22.04 cloud image:
+9. Download the Ubuntu 22.04 cloud image:
 **  wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
 **9. Create a disk image:
 **  qemu-img create -F qcow2 -b ./$VM_IMAGE -f qcow2 ./$VM_NAME.qcow2 10G
