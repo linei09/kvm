@@ -25,10 +25,14 @@ KVM on Ubuntu 22.04 LTS (Jammy Jellyfish) cloud images
    export VM_IMAGE=$UBUNTU_RELEASE-server-cloudimg-amd64.img
 ```
 11. Download the Ubuntu 22.04 cloud image:
-``` wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img```
+```
+wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+```
 9. Create a disk image:
-```qemu-img create -F qcow2 -b ./$VM_IMAGE -f qcow2 ./$VM_NAME.qcow2 10G```
-10. Create cloud-init files:
+```
+qemu-img create -F qcow2 -b ./$VM_IMAGE -f qcow2 ./$VM_NAME.qcow2 10G
+```
+11. Create cloud-init files:
 ```
 cat >network-config <<EOF                                                             
 ethernets:    
