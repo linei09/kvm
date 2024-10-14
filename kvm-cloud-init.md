@@ -94,3 +94,8 @@ virt-install --connect qemu:///system \
 - Nếu muốn đổi dùng ip mặc định do kvm cấp bằng dhcp thì không cần network-config và đổi thành như thế này
 
   ```--network bridge=virbr0,model=virtio,mac=$MAC_ADDR```
+
+
+  modify user-data
+  ![image](https://github.com/user-attachments/assets/dea5f079-711a-4136-9ce2-be68021c5d19)
++ restart máy
