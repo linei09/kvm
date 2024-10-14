@@ -87,8 +87,9 @@ virt-install --connect qemu:///system \
   --disk path=$VM_IMAGE,device=disk \
   --disk path=$VM_NAME-seed.qcow2,device=disk \
   --import \
-  **--network network=default,model=virtio,mac=$MAC_ADDR** \
+  --network network=default,model=virtio,mac=$MAC_ADDR \
   --noautoconsole
+
 ```
 - Nếu muốn đổi dùng ip mặc định do kvm cấp bằng dhcp thì không cần network-config và đổi thành như thế này
 
