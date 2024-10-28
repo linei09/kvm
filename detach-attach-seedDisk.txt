@@ -1,5 +1,7 @@
 cloud-localds -v --network-config=/home/ubutnu/Downloads/vm01-network-config /home/ubutnu/Downloads/vm01-seed.qcow2 /home/ubutnu/Downloads/vm01-user-data /home/ubutnu/Downloads/vm01-meta-data
 
+sudo cloud-init clean
+
 virsh detach-disk --domain vm01 /home/ubutnu/Downloads/vm01-seed.qcow2 --persistent --config --live
 
 virsh attach-disk --domain vm01 /home/ubutnu/Downloads/vm01-seed.qcow2  --target vdb --persistent --config --live
