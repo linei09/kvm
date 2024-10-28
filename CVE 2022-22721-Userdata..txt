@@ -1,0 +1,83 @@
+#cloud-config
+hostname: vm01
+manage_etc_hosts: true
+users:
+  - name: a
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    home: /home/a
+    shell: /bin/bash
+    lock_passwd: false
+ssh_pwauth: true
+disable_root: false
+chpasswd:
+  list: |
+    a:a
+  expire: false
+ 
+packages:
+  - build-essential
+  - libpcre3
+  - libpcre3-dev
+  - libssl-dev
+  - zlib1g-dev
+  - wget
+  - tar
+  - make
+  - gcc
+  - systemd
+  - libexpat1-dev
+  
+runcmd:
+  - sudo chown -R a:a /home/a
+
+  # Tải xuống và cài đặt APR
+  - sudo -u a -H sh -c "cd /home/a && wget https://archive.apache.org/dist/apr/apr-1.7.0.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a && tar -xzf apr-1.7.0.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-1.7.0 && ./configure >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-1.7.0 && make >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-1.7.0 && sudo make install >> /home/a/cloud-init.log 2>&1"
+
+  # Tải xuống và cài đặt APR-Util
+  - sudo -u a -H sh -c "cd /home/a && wget https://archive.apache.org/dist/apr/apr-util-1.6.1.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a && tar -xzf apr-util-1.6.1.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-util-1.6.1 && ./configure --with-apr=/usr/local/apr >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-util-1.6.1 && make >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/apr-util-1.6.1 && sudo make install >> /home/a/cloud-init.log 2>&1"
+
+  # Tải xuống và cài đặt Apache
+  - sudo -u a -H sh -c "cd /home/a && wget https://archive.apache.org/dist/httpd/httpd-2.4.54.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a && tar -xzf httpd-2.4.54.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && ./configure --enable-ssl --enable-so --with-apr=/usr/local/apr >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && make >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && sudo make install >> /home/a/cloud-init.log 2>&1"
+
+  # Cấu hình ServerName để tránh cảnh báo
+  - sudo -u a -H sh -c "echo 'ServerName localhost' | sudo tee -a /usr/local/apache2/conf/httpd.conf >> /home/a/cloud-init.log 2>&1"
+
+  # Dừng mọi tiến trình Apache đang chạy
+  - sudo killall httpd || true
+
+  # Khởi động Apache
+  - sudo /usr/local/apache2/bin/apachectl start >> /home/a/cloud-init.log 2>&1
+
+  # Cấu hình Apache như một dịch vụ
+  - |
+    cat <<EOF | sudo tee /etc/systemd/system/apache2.service
+    [Unit]
+    Description=The Apache HTTP Server
+    After=network.target
+
+    [Service]
+    Type=forking
+    ExecStart=/usr/local/apache2/bin/apachectl start
+    ExecStop=/usr/local/apache2/bin/apachectl stop
+    ExecReload=/usr/local/apache2/bin/apachectl graceful
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+  - sudo systemctl daemon-reload
+  - sudo systemctl start apache2
+  - sudo systemctl enable apache2
