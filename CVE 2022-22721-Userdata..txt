@@ -46,11 +46,11 @@ runcmd:
   - sudo -u a -H sh -c "cd /home/a/apr-util-1.6.1 && sudo make install >> /home/a/cloud-init.log 2>&1"
 
   # Tải xuống và cài đặt Apache
-  - sudo -u a -H sh -c "cd /home/a && wget https://archive.apache.org/dist/httpd/httpd-2.4.54.tar.gz >> /home/a/cloud-init.log 2>&1"
-  - sudo -u a -H sh -c "cd /home/a && tar -xzf httpd-2.4.54.tar.gz >> /home/a/cloud-init.log 2>&1"
-  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && ./configure --enable-ssl --enable-so --with-apr=/usr/local/apr >> /home/a/cloud-init.log 2>&1"
-  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && make >> /home/a/cloud-init.log 2>&1"
-  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.54 && sudo make install >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a && wget https://archive.apache.org/dist/httpd/httpd-2.4.52.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a && tar -xzf httpd-2.4.52.tar.gz >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.52 && ./configure --enable-ssl --enable-so --with-apr=/usr/local/apr >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.52 && make >> /home/a/cloud-init.log 2>&1"
+  - sudo -u a -H sh -c "cd /home/a/httpd-2.4.52 && sudo make install >> /home/a/cloud-init.log 2>&1"
 
   # Cấu hình ServerName để tránh cảnh báo
   - sudo -u a -H sh -c "echo 'ServerName localhost' | sudo tee -a /usr/local/apache2/conf/httpd.conf >> /home/a/cloud-init.log 2>&1"
@@ -77,7 +77,9 @@ runcmd:
     [Install]
     WantedBy=multi-user.target
     EOF
-
+  - sudo killall httpd	
   - sudo systemctl daemon-reload
   - sudo systemctl start apache2
   - sudo systemctl enable apache2
+
+final_message: "apache 2.4.52 done!"
