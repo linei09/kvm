@@ -1,0 +1,9 @@
+sudo apt remove --purge openssl -y
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.1.1u.tar.gz
+tar -xzf openssl-1.1.1u.tar.gz
+cd openssl-1.1.1u/
+./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl
+sudo make
+sudo make install
+export PATH=/usr/local/openssl/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/openssl/lib:$LD_LIBRARY_PATH
